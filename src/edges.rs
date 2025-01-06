@@ -596,19 +596,19 @@ where
                         }
                     }
 
-                    // Success event
-                    world.trigger_targets(
-                        SetEvent::<R> {
-                            target: self.target,
-                            _phantom: PhantomData,
-                        },
-                        self.host,
-                    );
-
                     // Clear the DFS and add it back to the World
                     dfs.clear();
                     world.insert_resource(dfs);
                 }
+
+                // Success event
+                world.trigger_targets(
+                    SetEvent::<R> {
+                        target: self.target,
+                        _phantom: PhantomData,
+                    },
+                    self.host,
+                );
             },
         }
     }

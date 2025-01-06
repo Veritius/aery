@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use bevy_ecs::prelude::Resource;
 use smallvec::SmallVec;
 
 use bevy_derive::{Deref, DerefMut};
@@ -354,6 +355,12 @@ pub struct UnsetEvent<R: Relation> {
     _phantom: PhantomData<R>,
 }
 
+#[derive(Default, Resource)]
+struct DfsSharedAlloc {
+    stack: Vec<Entity>,
+    visited: Vec<Entity>,
+}
+
 /// Command to set a relationship target for an entity.
 /// 
 /// If either of the participants do not exist, the host tries to target itself,
@@ -365,7 +372,6 @@ where
 {
     host: Entity,
     target: Entity,
-    symmetric_action: bool,
     _phantom: PhantomData<R>,
 }
 
@@ -375,7 +381,6 @@ impl<R: Relation> Set<R> {
         Self {
             host,
             target,
-            symmetric_action: false,
             _phantom: PhantomData,
         }
     }
@@ -423,37 +428,60 @@ where
             return;
         }
 
-        let mut old: Option<Entity> = None;
-
-        let mut host_entity = world.entity_mut(self.host);
-        if let Some(mut host_targets) = host_entity.get_mut::<Targets<R>>() {
-            // Check if this target is already present
-            if host_targets.vec.vec.contains(&self.target) {
-                return;
-            } else {
-                old = host_targets.vec.vec.first().copied();
-                host_targets.add(self.target);
-            }
-        } else {
-            // If Targets<R> doesn't exist on the host, create and insert a new one
-            let mut new_host_targets = Targets::<R>::default();
-            new_host_targets.add(self.target);
-            host_entity.insert(new_host_targets);
+        fn get_or_insert<'a, C: Component>(
+            entity: &'a mut EntityWorldMut<'a>,
+            insert: impl Fn() -> C,
+        ) -> &'a mut C {
+            if !entity.contains::<C>() { entity.insert(insert()); }
+            return entity.get_mut::<C>().unwrap().into_inner();
         }
 
-        let mut target_entity = world.entity_mut(self.target);
-        if let Some(mut target_hosts) = target_entity.get_mut::<Hosts<R>>() {
-            // Check if this host is already present
-            if target_hosts.vec.vec.contains(&self.host) {
-                return;
-            } else {
-                target_hosts.vec.add(self.host);
+        fn add_directed_link<R: Relation>(
+            world: &mut World,
+            host: Entity,
+            target: Entity,
+        ) -> Option<Entity> {
+            let first: Option<Entity>;
+
+            {
+                let mut host = world.entity_mut(host);
+                let host_targets = get_or_insert(&mut host, Targets::<R>::default);
+                if host_targets.vec.vec.contains(&target) { return None; }
+                first = host_targets.vec.vec.first().copied();
+                host_targets.add(target);
             }
-        } else {
-            // If Hosts<R> doesn't exist on the target, create and insert a new one
-            let mut new_target_hosts = Hosts::<R>::default();
-            new_target_hosts.vec.add(self.host);
-            target_entity.insert(new_target_hosts);
+
+            {
+                let mut target = world.entity_mut(target);
+                let target_hosts = get_or_insert(&mut target, Targets::<R>::default);
+                if target_hosts.vec.vec.contains(&host) { return None; }
+                target_hosts.add(host);
+            }
+
+            return first;
+        }
+
+        match R::DIRECTION_POLICY {
+            DirectionPolicy::Undirected => {
+                let first = add_directed_link::<R>(world, self.host, self.target);
+
+                // Set has to happen before asymmetric unset otherwise
+                // an entity can get despawned when it shouldn't.
+                add_directed_link::<R>(world, self.target, self.host);
+
+                'unset: { if let Some(first) = first {
+                    if self.target != first { break 'unset; }
+                    Command::apply(UnsetAsymmetric::<R>::new(self.host, first), world);
+                } }
+            },
+
+            DirectionPolicy::Directed => {
+                add_directed_link::<R>(world, self.host, self.target);
+            },
+
+            DirectionPolicy::Acyclic => {
+
+            },
         }
 
         world.trigger_targets(
@@ -463,26 +491,6 @@ where
             },
             self.host,
         );
-
-        let symmetrical = R::DIRECTION_POLICY == DirectionPolicy::Undirected;
-
-        // Symmetric set has to happen before exclusivity unset otherwise
-        // an entity can get despawned when it shouldn't.
-        if symmetrical && !self.symmetric_action {
-            Command::apply(
-                Set::<R> {
-                    host: self.target,
-                    target: self.host,
-                    symmetric_action: true,
-                    _phantom: PhantomData,
-                },
-                world,
-            );
-        }
-
-        if let Some(old) = old.filter(|old| symmetrical && self.target != *old) {
-            Command::apply(UnsetAsymmetric::<R>::new(self.host, old), world);
-        }
     }
 }
 

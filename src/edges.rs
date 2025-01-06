@@ -354,8 +354,11 @@ pub struct UnsetEvent<R: Relation> {
     _phantom: PhantomData<R>,
 }
 
-/// Command to set a relationship target for an entity. If either of the participants do not exist
-/// or the host tries to target itself the operation will be ignored and logged.
+/// Command to set a relationship target for an entity.
+/// 
+/// If either of the participants do not exist, the host tries to target itself,
+/// or the relation is acyclic and adding it would form a cycle,
+/// the operation will be ignored and logged.
 pub struct Set<R>
 where
     R: Relation,

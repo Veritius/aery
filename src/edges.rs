@@ -482,13 +482,31 @@ where
                     visited: Vec<Entity>,
                 }
 
-                // If the allocation resource doesn't exist already, we can just create it here,
-                // since we add it back to the world anyway.
-                let mut dfs = world.remove_resource().unwrap_or_else(DfsSharedAlloc::default);
+                // Quick trivial checks that allow us to skip a full DFS search.
+                let cycle_search_required = {
+                    let host_has_parents = world.entity(self.host)
+                        .get::<Hosts<R>>()
+                        .map(|v| v.vec.vec.len() > 0)
+                        .unwrap_or(false);
 
-                todo!();
+                    let target_has_targets = world.entity(self.target)
+                        .get::<Targets<R>>()
+                        .map(|v| v.vec.vec.len() > 0)
+                        .unwrap_or(false);
 
-                world.insert_resource(dfs);
+                    host_has_parents && target_has_targets
+                };
+
+                if cycle_search_required {
+                    // If the allocation resource doesn't exist already, we can just create it here,
+                    // since we add it back to the world anyway.
+                    let mut dfs = world.remove_resource().unwrap_or_else(DfsSharedAlloc::default);
+
+                    todo!();
+
+                    // Add the DFS resource back into the world
+                    world.insert_resource(dfs);
+                }
             },
         }
 

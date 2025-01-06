@@ -155,6 +155,16 @@ pub enum DirectionPolicy {
     Acyclic,
 }
 
+impl DirectionPolicy {
+    pub(crate) fn is_symmetric(&self) -> bool {
+        match self {
+            DirectionPolicy::Undirected => true,
+            DirectionPolicy::Directed => false,
+            DirectionPolicy::Acyclic => false,
+        }
+    }
+}
+
 /// The relation trait. This is what controls the cleanup, exclusivity & symmetry of a relation.
 /// Relations can be thought of as arrows. The terms Aery uses for the base and head of this arrow
 /// are "host" and "target" respectively. With both the host and target being entities.
@@ -191,7 +201,7 @@ pub enum DirectionPolicy {
 ///
 /// // Override edge symmetry
 /// #[derive(Relation)]
-/// #[aery(Symmetric)]
+/// #[aery(Undirected)]
 /// struct Symmetric;
 ///
 /// // Override cleanup policy

@@ -186,7 +186,7 @@ fn drop_item_from_inventory(
 // - Recursive: Recursively cleans up (eg. despawn all children of a parent with the parent)
 // - Total: Does both counted & recursive cleanup
 #[derive(Relation)]
-#[aery(Symmetric, Poly)]
+#[aery(Undirected, Poly)]
 struct FuseJoint;
 
 #[derive(Component)]

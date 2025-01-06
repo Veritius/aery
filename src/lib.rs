@@ -184,7 +184,7 @@
 //! // - Recursive: Recursively cleans up (eg. despawn all children of a parent with the parent)
 //! // - Total: Does both counted & recursive cleanup
 //! #[derive(Relation)]
-//! #[aery(Symmetric, Poly)]
+//! #[aery(Undirected, Poly)]
 //! struct FuseJoint;
 //!
 //! #[derive(Component)]
@@ -263,7 +263,7 @@ pub mod prelude {
             utils::{EdgeSide, Relations, Up},
             FoldBreadth, Join, Track, TrackSelf, Traverse,
         },
-        relation::{CleanupPolicy, Hierarchy, RegisterRelation, Relation, ZstOrPanic},
+        relation::{CleanupPolicy, DirectionPolicy, Hierarchy, RegisterRelation, Relation, ZstOrPanic},
         scope::{AeryEntityCommandsExt, AeryEntityWorldMutExt},
         tuple_traits::{Joinable, RelationSet},
     };

@@ -16,7 +16,7 @@ use bevy_hierarchy::{Children, Parent};
 use bevy_log::warn;
 use bevy_reflect::{utility::GenericTypePathCell, Reflect, TypePath};
 
-use crate::relation::{CleanupPolicy, Relation, ZstOrPanic};
+use crate::relation::{CleanupPolicy, DirectionPolicy, Relation, ZstOrPanic};
 
 // Small Stable Unique Vec
 #[derive(Reflect)]
@@ -446,9 +446,11 @@ where
             self.host,
         );
 
+        let symmetrical = R::DIRECTION_POLICY == DirectionPolicy::Undirected;
+
         // Symmetric set has to happen before exclusivity unset otherwise
         // an entity can get despawned when it shouldn't.
-        if R::SYMMETRIC && !self.symmetric_action {
+        if symmetrical && !self.symmetric_action {
             Command::apply(
                 Set::<R> {
                     host: self.target,
@@ -460,7 +462,7 @@ where
             );
         }
 
-        if let Some(old) = old.filter(|old| R::DIRECTION_POLICY && self.target != *old) {
+        if let Some(old) = old.filter(|old| symmetrical && self.target != *old) {
             Command::apply(UnsetAsymmetric::<R>::new(self.host, old), world);
         }
     }
@@ -493,7 +495,7 @@ impl<R: Relation> Command for Unset<R> {
     fn apply(self, world: &mut World) {
         Command::apply(UnsetAsymmetric::<R>::new(self.host, self.target), world);
 
-        if R::SYMMETRIC {
+        if R::DIRECTION_POLICY == DirectionPolicy::Undirected {
             Command::apply(UnsetAsymmetric::<R>::new(self.target, self.host), world);
         }
     }
@@ -593,7 +595,7 @@ impl<R: Relation> Command for UnsetAsymmetric<R> {
         // Need to check situation if !R::EXCLUSIVE - it is possible that the target also has us as target, so we need to send event
         // to the target also
         if host_removed_from_target && target_entity_exists_in_world {
-            if (R::SYMMETRIC && R::DIRECTION_POLICY) || (!R::DIRECTION_POLICY && target_has_host_as_target) {
+            if (R::DIRECTION_POLICY.is_symmetric() && R::EXCLUSIVE) || (!R::EXCLUSIVE && target_has_host_as_target) {
                 world.trigger_targets(
                     UnsetEvent::<R> {
                         target: self.host,
@@ -1334,7 +1336,7 @@ mod tests {
     struct AsymmetricRelation;
 
     #[derive(Relation)]
-    #[aery(Symmetric)]
+    #[aery(Undirected)]
     struct SymmetricRelation;
 
     #[derive(Relation)]
@@ -1342,7 +1344,7 @@ mod tests {
     struct PolyRelation;
 
     #[derive(Relation)]
-    #[aery(Poly, Symmetric)]
+    #[aery(Poly, Undirected)]
     struct PolySymmetricRelation;
 
     enum RelationType {

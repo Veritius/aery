@@ -1441,6 +1441,10 @@ mod tests {
     struct SymmetricRelation;
 
     #[derive(Relation)]
+    #[aery(Acyclic)]
+    struct AcyclicRelation;
+
+    #[derive(Relation)]
     #[aery(Poly)]
     struct PolyRelation;
 
@@ -1448,11 +1452,17 @@ mod tests {
     #[aery(Poly, Undirected)]
     struct PolySymmetricRelation;
 
+    #[derive(Relation)]
+    #[aery(Poly, Acyclic)]
+    struct PolyAcyclicRelation;
+
     enum RelationType {
         Asymmetric,
         Symmetric,
+        Acyclic,
         Poly,
         PolySymmetric,
+        PolyAcyclic,
     }
 
     fn test_unset_event<R: Relation>(
@@ -1518,15 +1528,19 @@ mod tests {
         // Register relations
         world.register_relation::<AsymmetricRelation>();
         world.register_relation::<SymmetricRelation>();
+        world.register_relation::<AcyclicRelation>();
         world.register_relation::<PolyRelation>();
         world.register_relation::<PolySymmetricRelation>();
+        world.register_relation::<PolyAcyclicRelation>();
 
         // Test cases: (RelationType, set_both_ways, expected counters after unset)
         let test_cases = vec![
             (RelationType::Asymmetric, false, 1, 0),
             (RelationType::Symmetric, false, 1, 1),
+            (RelationType::Acyclic, false, 1, 1),
             (RelationType::Poly, true, 1, 1),
             (RelationType::PolySymmetric, true, 1, 1),
+            (RelationType::PolyAcyclic, true, 1, 1),
         ];
 
         for (relation_type, set_both_ways, expected_a, expected_b) in test_cases {
@@ -1545,6 +1559,13 @@ mod tests {
                     expected_a,
                     expected_b,
                 ),
+                RelationType::Acyclic => test_unset_event::<AcyclicRelation>(
+                    &mut world,
+                    "AcyclicRelation",
+                    set_both_ways,
+                    expected_a,
+                    expected_b,
+                ),
                 RelationType::Poly => test_unset_event::<PolyRelation>(
                     &mut world,
                     "PolyRelation",
@@ -1555,6 +1576,13 @@ mod tests {
                 RelationType::PolySymmetric => test_unset_event::<PolySymmetricRelation>(
                     &mut world,
                     "PolySymmetricRelation",
+                    set_both_ways,
+                    expected_a,
+                    expected_b,
+                ),
+                RelationType::PolyAcyclic => test_unset_event::<PolyAcyclicRelation>(
+                    &mut world,
+                    "PolyAcyclicRelation",
                     set_both_ways,
                     expected_a,
                     expected_b,
@@ -1622,15 +1650,19 @@ mod tests {
         // Register relations
         world.register_relation::<AsymmetricRelation>();
         world.register_relation::<SymmetricRelation>();
+        world.register_relation::<AcyclicRelation>();
         world.register_relation::<PolyRelation>();
         world.register_relation::<PolySymmetricRelation>();
+        world.register_relation::<PolyAcyclicRelation>();
 
         // Test cases: (RelationType, set_both_ways, expected_counter_a, expected_counter_b)
         let test_cases = vec![
             (RelationType::Asymmetric, false, 1, 0),
             (RelationType::Symmetric, false, 1, 1),
+            (RelationType::Acyclic, false, 1, 0),
             (RelationType::Poly, true, 1, 1),
             (RelationType::PolySymmetric, true, 1, 1),
+            (RelationType::PolyAcyclic, true, 1, 1),
         ];
 
         for (relation_type, set_both_ways, expected_a, expected_b) in test_cases {
@@ -1649,6 +1681,13 @@ mod tests {
                     expected_a,
                     expected_b,
                 ),
+                RelationType::Acyclic => test_set_event::<SymmetricRelation>(
+                    &mut world,
+                    "AcyclicRelation",
+                    set_both_ways,
+                    expected_a,
+                    expected_b,
+                ),
                 RelationType::Poly => test_set_event::<PolyRelation>(
                     &mut world,
                     "PolyRelation",
@@ -1659,6 +1698,13 @@ mod tests {
                 RelationType::PolySymmetric => test_set_event::<PolySymmetricRelation>(
                     &mut world,
                     "PolySymmetricRelation",
+                    set_both_ways,
+                    expected_a,
+                    expected_b,
+                ),
+                RelationType::PolyAcyclic => test_set_event::<PolyAcyclicRelation>(
+                    &mut world,
+                    "PolyAcyclicRelation",
                     set_both_ways,
                     expected_a,
                     expected_b,

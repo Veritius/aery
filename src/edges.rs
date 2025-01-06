@@ -460,7 +460,7 @@ where
             );
         }
 
-        if let Some(old) = old.filter(|old| R::EXCLUSIVE && self.target != *old) {
+        if let Some(old) = old.filter(|old| R::DIRECTION_POLICY && self.target != *old) {
             Command::apply(UnsetAsymmetric::<R>::new(self.host, old), world);
         }
     }
@@ -593,7 +593,7 @@ impl<R: Relation> Command for UnsetAsymmetric<R> {
         // Need to check situation if !R::EXCLUSIVE - it is possible that the target also has us as target, so we need to send event
         // to the target also
         if host_removed_from_target && target_entity_exists_in_world {
-            if (R::SYMMETRIC && R::EXCLUSIVE) || (!R::EXCLUSIVE && target_has_host_as_target) {
+            if (R::SYMMETRIC && R::DIRECTION_POLICY) || (!R::DIRECTION_POLICY && target_has_host_as_target) {
                 world.trigger_targets(
                     UnsetEvent::<R> {
                         target: self.host,

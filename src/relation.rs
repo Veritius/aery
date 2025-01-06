@@ -142,6 +142,19 @@ pub enum CleanupPolicy {
     Total,
 }
 
+// TODO: Improved docs
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum DirectionPolicy {
+    /// Graphs are undirected (symmetrical).
+    Undirected,
+
+    /// Graphs are directed.
+    Directed,
+
+    /// Graphs are directed and acyclic.
+    Acyclic,
+}
+
 /// The relation trait. This is what controls the cleanup, exclusivity & symmetry of a relation.
 /// Relations can be thought of as arrows. The terms Aery uses for the base and head of this arrow
 /// are "host" and "target" respectively. With both the host and target being entities.
@@ -196,18 +209,14 @@ pub trait Relation: 'static + Sized + Send + Sync {
     /// or when a relation is unset.
     const CLEANUP_POLICY: CleanupPolicy = CleanupPolicy::Orphan;
 
+    // TODO: Add documentation to field
+    const DIRECTION_POLICY: DirectionPolicy = DirectionPolicy::Directed;
+
     /// Whether or not an entity is allowed to host more than 1 of this relation type.
     /// Entities can still be targeted multiple times by different entities with this relation.
     /// Entities cannot however host more than 1 of this relation at a time.
     /// Setting an exclusive relation that is already set will unset the existing relation.
     const EXCLUSIVE: bool = true;
-
-    /// Whether or not a relation is symmetric. Ie:
-    /// - When `e0 -R-> e1`
-    /// - Then `e0 <-R- e1`
-    ///
-    /// For example it would make sense for a `MarriedTo` relation to be symmetric.
-    const SYMMETRIC: bool = false;
 }
 
 /// For compatibility with bevy_hierarchy.

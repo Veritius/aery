@@ -7,15 +7,15 @@ use syn::{
 };
 
 struct RelationConfig {
-    policy: Ident,
+    cleanup: Ident,
+    direction: Ident,
     exclusive: bool,
-    symmetric: bool,
 }
 
 fn parse_config(ast: &DeriveInput) -> Result<RelationConfig> {
-    let mut policy = "Orphan";
+    let mut cleanup = "Orphan";
+    let mut direction = "Directed";
     let mut exclusive = true;
-    let mut symmetric = false;
 
     for attr in ast.attrs.iter().filter(|attr| attr.path().is_ident("aery")) {
         let nested = attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)?;
@@ -26,13 +26,24 @@ fn parse_config(ast: &DeriveInput) -> Result<RelationConfig> {
                         .into_iter()
                         .find(|ident| path.is_ident(ident))
                     {
-                        if policy != "Orphan" {
+                        if cleanup != "Orphan" {
                             return Err(Error::new_spanned(
                                 meta,
-                                "Tried to set policy multiple times",
+                                "Tried to set cleanup policy multiple times",
                             ));
                         }
-                        policy = new_policy;
+                        cleanup = new_policy;
+                    } else if let Some(new_policy) = ["Undirected", "Acyclic"]
+                        .into_iter()
+                        .find(|ident| path.is_ident(ident))
+                    {
+                        if direction != "Directed" {
+                            return Err(Error::new_spanned(
+                                meta,
+                                "Tried to set direction policy multiple times",
+                            ));
+                        }
+                        direction = new_policy;
                     } else if path.is_ident("Poly") {
                         if !exclusive {
                             return Err(Error::new_spanned(
@@ -41,14 +52,6 @@ fn parse_config(ast: &DeriveInput) -> Result<RelationConfig> {
                             ));
                         }
                         exclusive = false;
-                    } else if path.is_ident("Symmetric") {
-                        if symmetric {
-                            return Err(Error::new_spanned(
-                                meta,
-                                "Tried to set symmetry multiple times",
-                            ));
-                        }
-                        symmetric = true;
                     } else {
                         return Err(Error::new_spanned(meta, "Unrecognized property override"));
                     }
@@ -61,9 +64,9 @@ fn parse_config(ast: &DeriveInput) -> Result<RelationConfig> {
     }
 
     Ok(RelationConfig {
-        policy: Ident::new(policy, Span::call_site()),
+        cleanup: Ident::new(cleanup, Span::call_site()),
+        direction: Ident::new(direction, Span::call_site()),
         exclusive,
-        symmetric,
     })
 }
 
@@ -72,9 +75,9 @@ pub fn relation_derive(input: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(input as DeriveInput);
 
     let RelationConfig {
-        policy,
+        cleanup,
+        direction,
         exclusive,
-        symmetric,
     } = match parse_config(&ast) {
         Ok(config) => config,
         Err(e) => return e.into_compile_error().into(),
@@ -90,9 +93,9 @@ pub fn relation_derive(input: TokenStream) -> TokenStream {
 
     let output = quote! {
         impl #impl_generics Relation for #struct_name #type_generics #where_clause  {
-            const CLEANUP_POLICY: CleanupPolicy = CleanupPolicy::#policy;
+            const CLEANUP_POLICY: aery::relation::CleanupPolicy = aery::relation::CleanupPolicy::#cleanup;
+            const DIRECTION_POLICY: aery::relation::DirectionPolicy = aery::relation::DirectionPolicy::#direction;
             const EXCLUSIVE: bool = #exclusive;
-            const SYMMETRIC: bool = #symmetric;
         }
     };
 

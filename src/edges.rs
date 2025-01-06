@@ -576,6 +576,14 @@ where
                                 self.host,
                             );
 
+                            warn!(
+                                "{host:?} tried to target {target:?} with {rel}. \
+                                This would have created a cycle. Ignoring.",
+                                host = self.host,
+                                target = self.target,
+                                rel = std::any::type_name::<R>(),
+                            );
+
                             // Put things back to how they were and return
                             dfs.clear();
                             world.insert_resource(dfs);

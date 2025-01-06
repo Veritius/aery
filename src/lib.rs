@@ -255,8 +255,8 @@ pub mod prelude {
     #[doc(no_inline)]
     pub use crate::{
         edges::{
-            Abstains, Branch, Leaf, Participates, RelationCommands, Root, Set, SetEvent, Unset,
-            UnsetEvent,
+            Abstains, Branch, Leaf, Participates, RelationCommands, Root, Set, SetEvent,
+            SetFailedEvent, SetError, Unset, UnsetEvent,
         },
         for_each::*,
         operations::{

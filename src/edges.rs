@@ -331,6 +331,21 @@ pub struct SetEvent<R: Relation> {
     _phantom: PhantomData<R>,
 }
 
+/// Event triggered whenever a relation fails to be added
+#[derive(Event, Clone, Copy, Debug)]
+pub struct SetFailedEvent<R: Relation> {
+    pub target: Entity,
+    pub error: SetError,
+    _phantom: PhantomData<R>,
+}
+
+/// Possible errors that could cause a [`Set`] operation to fail.
+#[derive(Clone, Copy, Debug)]
+pub enum SetError {
+    /// The relation is [DirectionPolicy::Acyclic] and the relation would have formed a cyclic.
+    WouldCycle,
+}
+
 /// Event triggered whenever an entity loses a relation
 #[derive(Event, Clone, Copy, Debug)]
 pub struct UnsetEvent<R: Relation> {

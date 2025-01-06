@@ -93,8 +93,8 @@ pub fn relation_derive(input: TokenStream) -> TokenStream {
 
     let output = quote! {
         impl #impl_generics Relation for #struct_name #type_generics #where_clause  {
-            const CLEANUP_POLICY: aery::relation::CleanupPolicy = aery::relation::CleanupPolicy::#cleanup;
-            const DIRECTION_POLICY: aery::relation::DirectionPolicy = aery::relation::DirectionPolicy::#direction;
+            const CLEANUP_POLICY: CleanupPolicy = CleanupPolicy::#cleanup;
+            const DIRECTION_POLICY: DirectionPolicy = DirectionPolicy::#direction;
             const EXCLUSIVE: bool = #exclusive;
         }
     };

@@ -482,6 +482,19 @@ where
                     visited: Vec<Entity>,
                 }
 
+                impl DfsSharedAlloc {
+                    fn clear(&mut self) {
+                        self.stack.clear();
+                        self.visited.clear();
+                    }
+                }
+
+                // Add the link before any cycle checks.
+                // The reason we do this is to simplify the DFS search code.
+                // If we detect a cycle, we can simply remove it.
+                // But if we don't, well, we've already added it.
+                add_directed_link::<R>(world, self.host, self.target);
+
                 // Quick trivial checks that allow us to skip a full DFS search.
                 let cycle_search_required = {
                     let host_has_parents = world.entity(self.host)
@@ -502,9 +515,45 @@ where
                     // since we add it back to the world anyway.
                     let mut dfs = world.remove_resource().unwrap_or_else(DfsSharedAlloc::default);
 
-                    todo!();
+                    // Add our starting node to the stack for exploration.
+                    dfs.stack.push(self.host);
 
-                    // Add the DFS resource back into the world
+                    // We can use a query to find the children of each node.
+                    // This is possible since we've already added the link,
+                    // with the intention of removing it if a cycle is detected.
+                    let mut targets = world.query::<&Targets<R>>();
+
+                    // Simple depth-first search
+                    while let Some(node) = dfs.stack.pop() {
+                        // If we've already visited this node, it means a cycle would have occurred.
+                        // We can now remove the temporary link 
+                        if dfs.visited.contains(&node) {
+                            // Remove the link because it would cause a cycle
+                            Command::apply(UnsetAsymmetric::<R>::new(self.host, self.target), world);
+
+                            world.trigger_targets(
+                                SetFailedEvent::<R> {
+                                    target: self.target,
+                                    error: SetError::WouldCycle,
+                                    _phantom: PhantomData,
+                                },
+                                self.host,
+                            );
+
+                            // Put things back to how they were and return
+                            dfs.clear();
+                            world.insert_resource(dfs);
+                            return;
+                        }
+
+                        // Extend the stack with all the targets of the node we just visited
+                        if let Ok(targets) = targets.get(&world, node) {
+                            dfs.stack.extend_from_slice(&targets.vec.vec);
+                        }
+                    }
+
+                    // Clear the DFS and add it back to the World
+                    dfs.clear();
                     world.insert_resource(dfs);
                 }
             },

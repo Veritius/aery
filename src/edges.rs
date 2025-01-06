@@ -480,7 +480,7 @@ where
                 );
 
                 'unset: { if let Some(first) = first {
-                    if self.target != first { break 'unset; }
+                    if R::EXCLUSIVE && self.target != first { break 'unset; }
                     Command::apply(UnsetAsymmetric::<R>::new(self.host, first), world);
                 } }
             },

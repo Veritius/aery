@@ -355,12 +355,6 @@ pub struct UnsetEvent<R: Relation> {
     _phantom: PhantomData<R>,
 }
 
-#[derive(Default, Resource)]
-struct DfsSharedAlloc {
-    stack: Vec<Entity>,
-    visited: Vec<Entity>,
-}
-
 /// Command to set a relationship target for an entity.
 /// 
 /// If either of the participants do not exist, the host tries to target itself,
@@ -480,7 +474,21 @@ where
             },
 
             DirectionPolicy::Acyclic => {
+                // Shared scratch space used in DFS searches in commands.
+                // This is kept around so we don't constantly reallocate.
+                #[derive(Default, Resource)]
+                struct DfsSharedAlloc {
+                    stack: Vec<Entity>,
+                    visited: Vec<Entity>,
+                }
 
+                // If the allocation resource doesn't exist already, we can just create it here,
+                // since we add it back to the world anyway.
+                let mut dfs = world.remove_resource().unwrap_or_else(DfsSharedAlloc::default);
+
+                todo!();
+
+                world.insert_resource(dfs);
             },
         }
 

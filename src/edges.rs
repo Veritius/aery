@@ -463,6 +463,22 @@ where
                 // an entity can get despawned when it shouldn't.
                 add_directed_link::<R>(world, self.target, self.host);
 
+                world.trigger_targets(
+                    SetEvent::<R> {
+                        target: self.target,
+                        _phantom: PhantomData,
+                    },
+                    self.host,
+                );
+
+                world.trigger_targets(
+                    SetEvent::<R> {
+                        target: self.host,
+                        _phantom: PhantomData,
+                    },
+                    self.target,
+                );
+
                 'unset: { if let Some(first) = first {
                     if self.target != first { break 'unset; }
                     Command::apply(UnsetAsymmetric::<R>::new(self.host, first), world);
@@ -471,6 +487,14 @@ where
 
             DirectionPolicy::Directed => {
                 add_directed_link::<R>(world, self.host, self.target);
+
+                world.trigger_targets(
+                    SetEvent::<R> {
+                        target: self.target,
+                        _phantom: PhantomData,
+                    },
+                    self.host,
+                );
             },
 
             DirectionPolicy::Acyclic => {
@@ -529,7 +553,19 @@ where
                         // We can now remove the temporary link 
                         if dfs.visited.contains(&node) {
                             // Remove the link because it would cause a cycle
-                            Command::apply(UnsetAsymmetric::<R>::new(self.host, self.target), world);
+                            {
+                                let mut host = world.entity_mut(self.host);
+                                let mut host_targets = host.get_mut::<Targets<R>>().unwrap();
+                                host_targets.remove(self.target);
+                                if host_targets.vec.vec.len() == 0 { host.remove::<Targets<R>>(); }
+
+                                let mut target = world.entity_mut(self.target);
+                                let mut target_hosts = target.get_mut::<Hosts<R>>().unwrap();
+                                target_hosts.remove(self.target);
+                                if target_hosts.vec.vec.len() == 0 { target.remove::<Hosts<R>>(); }
+
+                                // We don't need to do any additional work.
+                            }
 
                             world.trigger_targets(
                                 SetFailedEvent::<R> {
@@ -552,20 +588,21 @@ where
                         }
                     }
 
+                    // Success event
+                    world.trigger_targets(
+                        SetEvent::<R> {
+                            target: self.target,
+                            _phantom: PhantomData,
+                        },
+                        self.host,
+                    );
+
                     // Clear the DFS and add it back to the World
                     dfs.clear();
                     world.insert_resource(dfs);
                 }
             },
         }
-
-        world.trigger_targets(
-            SetEvent::<R> {
-                target: self.target,
-                _phantom: PhantomData,
-            },
-            self.host,
-        );
     }
 }
 

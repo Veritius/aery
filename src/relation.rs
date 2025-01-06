@@ -142,16 +142,20 @@ pub enum CleanupPolicy {
     Total,
 }
 
-// TODO: Improved docs
+/// Direction policy, affecting how relations are created and traversed.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum DirectionPolicy {
     /// Graphs are undirected (symmetrical).
     Undirected,
 
-    /// Graphs are directed.
+    /// Graphs are directed (asymmetrical).
     Directed,
 
     /// Graphs are directed and acyclic.
+    /// 
+    /// To ensure that graphs are acyclic, many additional checks have to be performed.
+    /// For extremely large relational graphs with hundreds or thousands of relations,
+    /// frequent insertions may incur a significant performance cost.
     Acyclic,
 }
 
